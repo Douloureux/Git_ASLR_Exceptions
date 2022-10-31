@@ -2,8 +2,6 @@ Param (
     [string]$Path
 )
 
-AddExceptions(GetGitPath($Path))
-
 Function GetGitPath {
     Param (
         [Parameter(Mandatory=$true)]
@@ -13,8 +11,6 @@ Function GetGitPath {
 
     if ($Path -eq "") {
         $GFWRegKeyPath = "SOFTWARE\GitForWindows"
-        $GFWInstallPathValueName = "InstallPath"
-
 
         $HKLM = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Default)
         $GFWKey = $HKLM.OpensubKey($GFWRegKeyPath)
@@ -30,7 +26,7 @@ Function AddExceptions {
 
     $EXEsAll  = Get-ChildItem $Path -Filter "*.exe" -Recurse
     $EXEsRoot = Get-ChildItem $Path -Filter "*.exe"
-    $EXEs = $EXEsAll | Where -Property FullName -NotIn ($EXEsRoot | Select-Object -ExpandProperty FullName)
+    $EXEs = $EXEsAll | Where-Object -Property FullName -NotIn ($EXEsRoot | Select-Object -ExpandProperty FullName)
 
     $IFEOPath = "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 
@@ -59,3 +55,25 @@ Function AddExceptions {
         $EXEKeyFullPath.SetValue("MitigationAuditOptions", $MitigationAuditOptions, [Microsoft.Win32.RegistryValueKind]::Binary)
     }
 }
+
+
+$myWindowsID=[System.Security.Principal.WindowsIdentity]::GetCurrent()
+$myWindowsPrincipal=new-object System.Security.Principal.WindowsPrincipal($myWindowsID)
+ 
+$adminRole=[System.Security.Principal.WindowsBuiltInRole]::Administrator
+ 
+if ($myWindowsPrincipal.IsInRole($adminRole))
+   {
+   clear-host
+   }
+else
+   {
+   $newProcess = new-object System.Diagnostics.ProcessStartInfo "PowerShell";
+   $newProcess.Arguments = $myInvocation.MyCommand.Definition;
+   $newProcess.Verb = "runas";
+   
+   [System.Diagnostics.Process]::Start($newProcess);
+   exit
+   }
+ 
+AddExceptions(GetGitPath($Path))
